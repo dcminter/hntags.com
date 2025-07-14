@@ -12,6 +12,7 @@ for use as static content on the hntags.com website.
 
 ## Status
 
+  * Uses an Ollama client to categorise the stories 
   * Lists all the top story IDs
 
 ## Notes
@@ -20,3 +21,6 @@ I'm currently using the [Firebase](https://pypi.org/project/firebase/) library t
 the [Hacker News firebase feed](https://github.com/HackerNews/API?tab=readme-ov-file). This is not a current
 or official library; however, its last update was reasonably recent (2023) and it supports anonymous
 credentials - which as far as I can work out the official Google Firebase client/admin libraries don't.
+
+I'm planning to use Jinja 2 to template the HN style and I've pulled down a copy of their front page
+to be a starting point for the template.
