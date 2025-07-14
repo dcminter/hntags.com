@@ -1,0 +1,51 @@
+/* Stylings stolen grom https://news.ycombinator.com */
+body  { font-family:Verdana, Geneva, sans-serif; font-size:10pt; color:#828282; }
+td    { font-family:Verdana, Geneva, sans-serif; font-size:10pt; color:#828282; }
+
+a:link    { color:#000000; text-decoration:none; }
+a:visited { color:#828282; text-decoration:none; }
+
+.hnname  { margin-left:1px; margin-right: 5px; }
+.pagetop a:visited { color:#000000;}
+.pagetop { font-family:Verdana, Geneva, sans-serif; font-size: 10pt; color:#222222; line-height:12px; }
+
+.title   { font-family:Verdana, Geneva, sans-serif; font-size: 10pt; color:#828282; overflow:hidden; }
+.subtext { font-family:Verdana, Geneva, sans-serif; font-size:  7pt; color:#828282; }
+
+#hnmain { min-width: 796px; }
+
+.title a { word-break: break-word; }
+
+.subtext a:link, .subtext a:visited { color:#828282; }
+.subtext a:hover { text-decoration:underline; }
+
+pre { overflow: auto; padding: 2px; white-space: pre-wrap; overflow-wrap:anywhere; }
+pre:hover { overflow:auto }
+
+
+.rotate180 {
+  -webkit-transform: rotate(180deg);  /* Chrome and other webkit browsers */
+  -moz-transform:    rotate(180deg);  /* FF */
+  -o-transform:      rotate(180deg);  /* Opera */
+  -ms-transform:     rotate(180deg);  /* IE9 */
+  transform:         rotate(180deg);  /* W3C complaint browsers */
+
+  /* IE8 and below */
+  -ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=-1, M12=0, M21=0, M22=-1, DX=0, DY=0, SizingMethod='auto expand')";
+}
+
+/* mobile device */
+@media only screen
+and (min-width : 300px)
+and (max-width : 750px) {
+  #hnmain { width: 100%; min-width: 0; }
+  body { padding: 0; margin: 0; width: 100%; }
+  td { height: inherit !important; }
+  .title, .comment { font-size: inherit;  }
+  span.pagetop { display: block; margin: 3px 5px; font-size: 12px; line-height: normal }
+  span.pagetop b { display: block; font-size: 15px; }
+  table.comment-tree .comment a { display: inline-block; max-width: 200px; overflow: hidden; white-space: nowrap;
+    text-overflow: ellipsis; vertical-align:top; }
+  .title { font-size: 11pt; line-height: 14pt;  }
+  .subtext { font-size: 9pt; }
+}
