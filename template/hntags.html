@@ -3,8 +3,8 @@
 <head>
   <meta name="referrer" content="origin">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" type="text/css" href="hntags.css">
-  <link rel="icon" href="hntags.png">
+  <link rel="stylesheet" type="text/css" href="static/hntags.css">
+  <link rel="icon" href="static/hntags.svg">
   <title>HN Tags</title>
 </head>
 <body>
@@ -12,16 +12,17 @@
   <center>
     <table id="hnmain" border="0" cellpadding="0" cellspacing="0" width="85%" bgcolor="#F6F6EF">
       <tr>
-        <td bgcolor="#e39600">
+        <td bgcolor="#BADBAD">
           <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding:2px">
             <tr>
               <td style="width:18px;padding-right:4px">
-                <a href="https://news.ycombinator.com/news"><img src="hntags.png" width="18" height="18" style="border:1px white solid; display:block"></a>
+                <a href="https://news.ycombinator.com/news"><img src="static/hntags.svg" width="18" height="18" style="border:1px white solid; display:block"></a>
               </td>
-              <td style="line-height:12pt; height:10px;">
-              <span class="pagetop">
-              	<b class="hnname"><a href="https://news.ycombinator.com/news">HNTags.com stories from Hacker News</a></b>
-              </span></td>
+              <td style="line-height:12pt; height:10px">
+              <div class="pagetop">
+              	<b class="hnname"><a href="https://news.ycombinator.com/news">HNTags.com categorised stories from Hacker News</a> ({{ category }})</b>
+                <div class="hntmeta">Retrieved at: {{ start }} and rendered at: {{ render }}</div>
+              </div></td>
             </tr>
           </table>
         </td>
@@ -30,8 +31,9 @@
 
         <td>
           <table border="0" cellpadding="0" cellspacing="0">
+            <tr class="spacer" style="height:5px"><td/></tr>
             {% for story in page %}
-            <tr class="athing submission" id="STORY_ID">
+            <tr class="athing submission" id="{{story.id}}">
               <td align="right" valign="top" class="title">
               <span class="rank">{{ story.index }}.</span></td>
               <td valign="top"/>
@@ -45,37 +47,31 @@
               <td colspan="2"></td>
               <td class="subtext">
               	<span class="subline">
-              		<span class="score">{{story.points}}&nbsp&nbsp;points</span>
-              		by <a href="user?id={{story.user}}" class="hnuser">{{story.user}}</a>
+              		<span class="score">{{story.score}}&nbsp&nbsp;points</span>
+              		by <a href="user?id={{story.by}}" class="hnuser">{{story.by}}</a>
               		 | <a href="https://news.ycombinator.com/item?id={{story.id}}">{{story.comment_count}}&nbsp&nbsp;comments</a>
+                  {% if story.tags %}
+                    <span>| {% for tag in story.tags %}<b><a href="{{tag}}.html">{{tag}}</a></b>{% if not loop.last %},&nbsp;{% endif %}{% endfor %}</span>
+                  {% endif %}
               	</span>
               </td>
             </tr>
             <tr class="spacer" style="height:5px"><td/></tr>
             {% endfor %}
-            <tr class="spacer" style="height:5px"><td/></tr>
-            <tr class="morespace" style="height:10px"><td/></tr>
-            <tr>
-              <td colspan="2"></td>
-              <td class='title'>
-                {% if page.has_next %}
-                <a href='{{page.next}}' class='morelink' rel='next'>More</a>
-                {% endif %}
-              </td>
-            </tr>
           </table>
         </td>
       </tr>
       <tr>
         <td>
-          <img src="s.gif" height="10" width="0">
+          <img src="static/s.gif" height="10" width="0">
           <table width="100%" cellspacing="0" cellpadding="1">
             <tr>
-              <td bgcolor="#e39600"></td>
+              <td bgcolor="#BADBAD"><center></center></td>
             </tr>
           </table><br>
         </td>
       </tr>
+      <tr style="display: flex"><td style="flex: 1; text-align: right;">Incompetently cobbled together by <b><a href="https://paperstack.com/hntags/">paperstack</a></b></td></tr>
     </table>
   </center>
 </body>
