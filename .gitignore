@@ -11,3 +11,6 @@ wheels/
 
 # The output directory
 output/
+
+# IntelliJ
+.idea/
