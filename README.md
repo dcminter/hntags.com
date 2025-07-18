@@ -23,6 +23,7 @@ The tool is configurable via the following environment variables:
 
 ## Status
 
+  * I'm testing out the infrastructure, so a stale version is public on [HNTags.com](https://hntags.com) right now!
   * Cleaner categorisation
   * Renders category pages
   * Renders something that looks a bit like an HN page
@@ -86,4 +87,8 @@ on my little Linux machine without a GPU.
 
 Next up is to figure out exactly how I'm going to serve these pages and set that up - I want to use CloudFront
 but not sure exactly how I'm going to manage the atomic switching of the content if I push it to S3 instead
-of a real filesystem. Perhaps I'll just run a micro instance with nginx on it or something?
+of a real filesystem. ~~Perhaps I'll just run a micro instance with nginx on it or something?~~ Nah, leaning
+towards S3  so I don't burn too much spare time on this. It'll be less good, but good enough for a toy. I have 
+some AWS CLI based upload stuff working fairly manually (including an in-console step where I invalidate the 
+distribution after upload) but I want to move all that into the python side. Probably I should restructure things 
+into not-just-one-giant-file first. Who knows, there might even be tests some day...
