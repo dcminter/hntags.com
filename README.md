@@ -23,6 +23,10 @@ The tool is configurable via the following environment variables:
 
 ## Status
 
+*Not* yet running regularly or automatically. 
+
+I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs a proper fix. 
+
   * I'm testing out the infrastructure, so a stale version is public on [HNTags.com](https://hntags.com) right now!
   * Cleaner categorisation
   * Renders category pages
