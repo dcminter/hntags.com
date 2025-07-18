@@ -14,3 +14,6 @@ output/
 
 # IntelliJ
 .idea/
+
+# Local scripts
+run

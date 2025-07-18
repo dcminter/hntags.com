@@ -4,10 +4,11 @@ from ollama import Client
 from ollama import ChatResponse
 import datetime
 from pathlib import Path
+import os
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-ENV = Environment(
+JINJA2_ENV = Environment(
     loader=PackageLoader("main", "template"), autoescape=select_autoescape()
 )
 
@@ -19,13 +20,11 @@ category names are preferable but a category name SHOULD never exceed two words.
 "AI, Hats, Short Sticks." Prefer simpler category names; "AI" is preferable to "AI Software" for example. The output 
 MUST always be in English. The output MUST never contain words other than the list of categories itself."""
 
-# Other models tried:
-# llama3.3 (only tried on GPU)
-# gemma3n:e4b (worked ok on CPU)
-MODEL = "qwen2.5:1.5b"
-HOST = "http://slab.local:11434"  # Originally http://yorkshire.local:11434
-THREADS = 8  # Crude profiling suggests it really is worth using all the available cores on Slab
-STORIES_IN_PAGE = 30  # Temporary while testing stuff
+HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
+MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
+THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
+STORIES_IN_PAGE = int(os.environ.get("HNTAGS_STORIES", 30))
+
 
 client = Client(
     host=HOST,
@@ -172,6 +171,10 @@ def write_main_index(render_time, start, stories, output_path, template):
 
 
 def main():
+    print(
+        f"I will connect to {HOST} to run Ollama model {MODEL} with {THREADS} threads and processing {STORIES_IN_PAGE} front page stories"
+    )
+
     start_time_utc = datetime.datetime.now(datetime.timezone.utc)
     print(f"Run started at {start_time_utc} (UTC)")
 
@@ -180,7 +183,7 @@ def main():
     # Loading complete, so capture the timestamp to differentiate when we looked at HN and when we finished rendering
     render_time = datetime.datetime.now(datetime.timezone.utc)
 
-    template = ENV.get_template("hntags.html")
+    template = JINJA2_ENV.get_template("hntags.html")
 
     output_path = "./output"
     clean_output_directory(output_path)
@@ -189,7 +192,7 @@ def main():
         categorised_stories, render_time, start_time_utc, output_path, template
     )
 
-    # I'm going to want a "publish" step here as well to push everything up to an S3 bucket!
+    # I'm going to want a "publish" step here
 
     finish = datetime.datetime.now(datetime.timezone.utc)
     print(
