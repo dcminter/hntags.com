@@ -36,11 +36,6 @@ The tool is configurable via the following environment variables:
   * Uses an Ollama client to categorise the stories 
   * Lists all the top story IDs
 
-## Bugs
-
-I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs a proper fix.
-That will likely come *after* the work to get it regularly and automatically publishing though.
-
 ## Weaknesses, Fear, Uncertainty, Doubt
 
 This is mostly an excercise to get myself more up to speed on Python. It kinda works, but I'm sure it's not what
@@ -108,6 +103,11 @@ to go and delete those periodically. I did consider setting up two different S3 
 and changing the distribution origin after each set of files is uploaded - then I could empty the inactive 
 bucket/folder after each push. However that feels like a potentially fragile approach and it's probably solving for
 a problem (an expensive amount of data in the bucket) that I'll never really have. S3 is very cheap. We'll see.
+
+Bugfix: ~~I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs 
+a proper fix. That will likely come *after* the work to get it regularly and automatically publishing though.~~ the
+files served from the S3 bucket weren't declared as using the UTF-8 charset as part of the content type header. I've
+therefore added a meta tag in the template to declare this inline.
 
 I think I want to dockerise this stuff before I fully commit to running it on an hourly basis (the plan).
 

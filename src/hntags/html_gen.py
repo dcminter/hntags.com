@@ -11,7 +11,7 @@ def write_category_indices(
         print(
             f"Category: {category} contains {len(categorised_stories.get(category) or [])} stories"
         )
-        with open(f"{output_path}/{category}.html", "w") as output:
+        with open(f"{output_path}/{category}.html", "wb") as output:
             output.write(
                 template.render(
                     {
@@ -20,7 +20,7 @@ def write_category_indices(
                         "start": start,
                         "category": category,
                     }
-                )
+                ).encode("utf-8")
             )
 
 
@@ -31,7 +31,7 @@ def write_main_index(
     output_path,
     template: Template,
 ):
-    with open(f"{output_path}/index.html", "w") as output:
+    with open(f"{output_path}/index.html", "wb") as output:
         output.write(
             template.render(
                 {
@@ -40,7 +40,7 @@ def write_main_index(
                     "start": start_time_utc.strftime("%H:%M:%S %Z"),
                     "category": "all",
                 }
-            )
+            ).encode("utf-8")
         )
 
 

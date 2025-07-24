@@ -63,6 +63,7 @@ def retrieve_and_categorise_stories(
     story_ids = hn_firebase.get_top_story_ids(firebase, stories_in_page)
     stories = []
     categorised_stories = {}
+
     for index, story_id in enumerate(story_ids):  # Should I be using map here really?
         print(
             f"Elapsed time so far: {(datetime.datetime.now(datetime.timezone.utc) - start_time_utc).total_seconds()} seconds"
@@ -77,10 +78,13 @@ def retrieve_and_categorise_stories(
             max_comments=max_comments,
             max_categories=max_categories,
         )
+
         story["index"] = index
         stories.append(story)
+
         for tag in story.get("tags") or []:
             entries_in_category = categorised_stories.get(tag) or []
             entries_in_category.append(story)
             categorised_stories[tag] = entries_in_category
+
     return categorised_stories, stories
