@@ -1,10 +1,10 @@
-from firebase import firebase
 from firebase.firebase import FirebaseApplication
 from ollama import Client
 from ollama import ChatResponse
 import datetime
 from pathlib import Path
 import os
+from hntags import hn_firebase
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -76,50 +76,51 @@ def ask_the_llama(story, comments):
     return sanitised_categories(categories[:MAX_CATEGORIES])[:MAX_CATEGORIES]
 
 
-def process_comments(db: FirebaseApplication, id):
-    story = db.get("v0/item", id)
-    print(f"Retrieved story with id {id} and title '{story.get('title')}'")
+def process_comments(firebase: FirebaseApplication, id: str, max_comments: int):
+    raw_story = hn_firebase.get_raw_story(firebase, id)
+    print(f"Retrieved story with id {id} and title '{raw_story.get('title')}'")
 
-    if not story.get("dead") and not story.get("deleted"):
-        story_text = f"""Story: {story["title"]}, ID: {id}
-            By: {story.get("by")}, Time: {story.get("time")}, Score: {story.get("score")}, Dead: {story.get("dead")}, Deleted: {story.get("deleted")}
-            {story.get("text") or story.get("url")}"""
+    if not raw_story.get("dead") and not raw_story.get("deleted"):
+        story_text = f"""Story: {raw_story["title"]}, ID: {id}
+            By: {raw_story.get("by")}, Time: {raw_story.get("time")}, Score: {raw_story.get("score")}, Dead: {raw_story.get("dead")}, Deleted: {raw_story.get("deleted")}
+            {raw_story.get("text") or raw_story.get("url")}"""
 
-        # It makes no sense to drag in ALL top level comments. Let's truncate it to MAX_COMMENTS and assume those cover the gist
-        comment_ids = story.get("kids") or []
-        comment_ids = comment_ids[:MAX_COMMENTS]
+        # It makes no sense to drag in ALL top level comments. Let's truncate it to max_comments and assume those cover the gist
+        comment_ids = raw_story.get("kids") or []
+        comment_ids = comment_ids[:max_comments]
         comments = []
         comment_count = len(comment_ids)
         print(f"Retrieving {comment_count} comments", end="", flush=True)
         for index, comment_id in enumerate(comment_ids):
             print(".", end="", sep="", flush=True)
-            comment = db.get("v0/item", comment_id)
-            comment_text = f"""Comment ID: {comment_id}, By: {comment.get("by")}, Time: {comment.get("time")}, Score: {comment.get("score")}, Dead: {comment.get("dead")}, Deleted: {comment.get("deleted")}
-                    {comment.get("text") or ""}"""
+            raw_comment = hn_firebase.get_raw_comment(firebase, comment_id)
+            comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
+                    {raw_comment.get("text") or ""}"""
             comments.append(comment_text)
         print()
 
         print("All comments retrieved for this story")
-        story["tags"] = ask_the_llama(story_text, comments)
-        story["comment_count"] = comment_count
-        return story
+        raw_story["tags"] = ask_the_llama(story_text, comments)
+        raw_story["comment_count"] = comment_count
+        return raw_story
     else:
-        print(f"Story is dead or deleted ({story.get('dead')}/{story.get('deleted')})")
+        print(
+            f"Story is dead or deleted ({raw_story.get('dead')}/{raw_story.get('deleted')})"
+        )
         return None
 
 
 def retrieve_and_categorise_stories(starttime):
-    db = firebase.FirebaseApplication("https://hacker-news.firebaseio.com/")
+    firebase = hn_firebase.get_hn_firebase_connection()
+    story_ids = hn_firebase.get_top_story_ids(firebase, STORIES_IN_PAGE)
     stories = []
     categorised_stories = {}
-    for index, story_id in enumerate(
-        get_stories(db)
-    ):  # Should I be using map here really?
+    for index, story_id in enumerate(story_ids):  # Should I be using map here really?
         print(
             f"Elapsed time so far: {(datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()} seconds"
         )
         print(f"Processing comments for story {index + 1} of {STORIES_IN_PAGE}")
-        story = process_comments(db, story_id)
+        story = process_comments(firebase, story_id, MAX_COMMENTS)
         story["index"] = index
         stories.append(story)
         for tag in story.get("tags") or []:
