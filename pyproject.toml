@@ -1,7 +1,10 @@
 [project]
-name = "hntags-com"
+name = "hntags"
 version = "0.1.0"
-description = "Add your description here"
+description = "HN Tags - generate a categorised version of the Hacker News front page"
+authors = [
+    { name = "Dave Minter", email = "dave@paperstack.com" }
+]
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,3 +12,10 @@ dependencies = [
     "jinja2>=3.1.6",
     "ollama>=0.5.1",
 ]
+
+[project.scripts]
+hntags = "hntags:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -9,7 +9,7 @@ import os
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 JINJA2_ENV = Environment(
-    loader=PackageLoader("main", "template"), autoescape=select_autoescape()
+    loader=PackageLoader("hntags", "template"), autoescape=select_autoescape()
 )
 
 SYSTEM_PROMPT = """
@@ -24,7 +24,8 @@ HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
 MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
 THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
 STORIES_IN_PAGE = int(os.environ.get("HNTAGS_STORIES", 30))
-
+MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
+MAX_COMMENTS = int(os.environ.get("HNTAGS_COMMENTS", 10))
 
 client = Client(
     host=HOST,
@@ -72,7 +73,7 @@ def ask_the_llama(story, comments):
         print(f"Category: {category}")
 
     # I constrain this a lot so that (hopefully) we only get genuinely relevant categories
-    return sanitised_categories(categories[:3])[:3]
+    return sanitised_categories(categories[:MAX_CATEGORIES])[:MAX_CATEGORIES]
 
 
 def process_comments(db: FirebaseApplication, id):
@@ -84,9 +85,9 @@ def process_comments(db: FirebaseApplication, id):
             By: {story.get("by")}, Time: {story.get("time")}, Score: {story.get("score")}, Dead: {story.get("dead")}, Deleted: {story.get("deleted")}
             {story.get("text") or story.get("url")}"""
 
-        # It makes no sense to drag in ALL top level comments. Let's truncate it to 10 and assume those cover the gist
+        # It makes no sense to drag in ALL top level comments. Let's truncate it to MAX_COMMENTS and assume those cover the gist
         comment_ids = story.get("kids") or []
-        comment_ids = comment_ids[:10]
+        comment_ids = comment_ids[:MAX_COMMENTS]
         comments = []
         comment_count = len(comment_ids)
         print(f"Retrieving {comment_count} comments", end="", flush=True)
@@ -185,7 +186,8 @@ def main():
 
     template = JINJA2_ENV.get_template("hntags.html")
 
-    output_path = "./output"
+    output_path = f"{os.getcwd()}/output"
+    print(f"Output path is: {output_path}")
     clean_output_directory(output_path)
     write_main_index(render_time, start_time_utc, stories, output_path, template)
     write_category_indices(
@@ -200,5 +202,6 @@ def main():
     )
 
 
+# I am clueless... is this necessary/useful?
 if __name__ == "__main__":
     main()
