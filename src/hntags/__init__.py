@@ -6,6 +6,7 @@ import os
 from hntags import hn_firebase
 from hntags import llm
 from hntags import html_gen
+from hntags import hntags
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -17,73 +18,8 @@ MODEL_HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
 MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
 THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
 STORIES_IN_PAGE = int(os.environ.get("HNTAGS_STORIES", 30))
-MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
 MAX_COMMENTS = int(os.environ.get("HNTAGS_COMMENTS", 10))
-
-
-def get_stories(db):
-    full_top_story_ids = db.get("v0", "topstories")
-    top_story_ids = full_top_story_ids[:STORIES_IN_PAGE]
-    return top_story_ids
-
-
-def process_comments(
-    ollama_client, firebase: FirebaseApplication, story_id: str, max_comments: int
-):
-    raw_story = hn_firebase.get_raw_story(firebase, story_id)
-    print(f"Retrieved story with id {story_id} and title '{raw_story.get('title')}'")
-
-    if not raw_story.get("dead") and not raw_story.get("deleted"):
-        story_text = f"""Story: {raw_story["title"]}, ID: {story_id}
-            By: {raw_story.get("by")}, Time: {raw_story.get("time")}, Score: {raw_story.get("score")}, Dead: {raw_story.get("dead")}, Deleted: {raw_story.get("deleted")}
-            {raw_story.get("text") or raw_story.get("url")}"""
-
-        # It makes no sense to drag in ALL top level comments. Let's truncate it to max_comments and assume those cover the gist
-        comment_ids = raw_story.get("kids") or []
-        comment_ids = comment_ids[:max_comments]
-        comments = []
-        comment_count = len(comment_ids)
-        print(f"Retrieving {comment_count} comments", end="", flush=True)
-        for index, comment_id in enumerate(comment_ids):
-            print(".", end="", sep="", flush=True)
-            raw_comment = hn_firebase.get_raw_comment(firebase, comment_id)
-            comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
-                    {raw_comment.get("text") or ""}"""
-            comments.append(comment_text)
-        print()
-
-        print("All comments retrieved for this story")
-        raw_story["tags"] = llm.categorise_story_and_comments(
-            ollama_client, MODEL, THREADS, story_text, comments, MAX_CATEGORIES
-        )
-        raw_story["comment_count"] = comment_count
-        return raw_story
-    else:
-        print(
-            f"Story is dead or deleted ({raw_story.get('dead')}/{raw_story.get('deleted')})"
-        )
-        return None
-
-
-def retrieve_and_categorise_stories(starttime):
-    firebase = hn_firebase.get_hn_firebase_connection()
-    ollama_client = llm.get_ollama_client(MODEL_HOST)
-    story_ids = hn_firebase.get_top_story_ids(firebase, STORIES_IN_PAGE)
-    stories = []
-    categorised_stories = {}
-    for index, story_id in enumerate(story_ids):  # Should I be using map here really?
-        print(
-            f"Elapsed time so far: {(datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()} seconds"
-        )
-        print(f"Processing comments for story {index + 1} of {STORIES_IN_PAGE}")
-        story = process_comments(ollama_client, firebase, story_id, MAX_COMMENTS)
-        story["index"] = index
-        stories.append(story)
-        for tag in story.get("tags") or []:
-            entries_in_category = categorised_stories.get(tag) or []
-            entries_in_category.append(story)
-            categorised_stories[tag] = entries_in_category
-    return categorised_stories, stories
+MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
 
 
 def main():
@@ -94,8 +30,18 @@ def main():
     start_time_utc = datetime.datetime.now(datetime.timezone.utc)
     print(f"Run started at {start_time_utc} (UTC)")
 
-    categorised_stories, stories = retrieve_and_categorise_stories(start_time_utc)
+    # Retrieve & categorise the stories
+    categorised_stories, stories = hntags.retrieve_and_categorise_stories(
+        model_host=MODEL_HOST,
+        model=MODEL,
+        threads=THREADS,
+        stories_in_page=STORIES_IN_PAGE,
+        max_comments=MAX_COMMENTS,
+        max_categories=MAX_CATEGORIES,
+        start_time_utc=start_time_utc,
+    )
 
+    # Generate the output files into a working directory (always `./output` relative to the working directory)
     html_gen.generate(JINJA2_ENV, start_time_utc, stories, categorised_stories)
 
     # I'm going to want a "publish" step here
