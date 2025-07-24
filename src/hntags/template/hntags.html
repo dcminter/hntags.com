@@ -21,7 +21,7 @@
               <td style="line-height:12pt; height:10px">
               <div class="pagetop">
               	<b class="hnname"><a href="https://news.ycombinator.com/news">HNTags.com categorised stories from Hacker News</a> ({{ category }})</b>
-                <div class="hntmeta">Retrieved at: {{ start }} and rendered at: {{ render }}</div>
+                <div class="hntmeta">Retrieval from: {{ start }} to: {{ render }}</div>
               </div></td>
             </tr>
           </table>
@@ -35,7 +35,7 @@
             {% for story in page %}
             <tr class="athing submission" id="{{story.id}}">
               <td align="right" valign="top" class="title">
-              <span class="rank">{{ story.index }}.</span></td>
+              <span class="rank">{{ story.index + 1}}.</span></td>
               <td valign="top"/>
               <td class="title">
               	<span class="titleline">

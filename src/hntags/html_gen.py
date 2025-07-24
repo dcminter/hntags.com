@@ -31,14 +31,13 @@ def write_main_index(
     output_path,
     template: Template,
 ):
-    # Move this stuff into a "writing output" function
     with open(f"{output_path}/index.html", "w") as output:
         output.write(
             template.render(
                 {
                     "page": stories,
-                    "render": render_time_utc,
-                    "start": start_time_utc,
+                    "render": render_time_utc.strftime("%H:%M:%S %Z"),
+                    "start": start_time_utc.strftime("%H:%M:%S %Z"),
                     "category": "all",
                 }
             )
@@ -62,6 +61,7 @@ def generate(
     output_path = f"{os.getcwd()}/output"
     print(f"Output path is: {output_path}")
     clean_output_directory(output_path)
+
     write_main_index(render_time_utc, start_time_utc, stories, output_path, template)
     write_category_indices(
         categorised_stories, render_time_utc, start_time_utc, output_path, template

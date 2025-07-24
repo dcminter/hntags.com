@@ -98,7 +98,16 @@ I'm using the [Qwen2.5:1.5b model](https://www.ollama.com/library/qwen2.5:1.5b) 
 on my little Linux machine without a GPU.
 
 I'm serving [hntags.com](https://hntags.com) via Cloudfront from an S3 bucket. Currently I just have a shell script
-that uploads the files and creates an invalidation, but I'll move that logic into another python module soon.
+that uploads the files and creates an invalidation, but I'll move that logic into another python module soon. Writing 
+all the files to the S3 bucket isn't atomic - however by updating the index.html file last I should avoid the worst
+user-visible issues (at worst they'll navigate to a topic page that shows topics that weren't on the index page they
+just visited)
+
+A slightly side effect is that I'm slowly filling my S3 bucket with stale category pages. I should create a batch job
+to go and delete those periodically. I did consider setting up two different S3 buckets (or folders within the bucket)
+and changing the distribution origin after each set of files is uploaded - then I could empty the inactive 
+bucket/folder after each push. However that feels like a potentially fragile approach and it's probably solving for
+a problem (an expensive amount of data in the bucket) that I'll never really have. S3 is very cheap. We'll see.
 
 I think I want to dockerise this stuff before I fully commit to running it on an hourly basis (the plan).
 
