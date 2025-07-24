@@ -2,10 +2,10 @@ from firebase.firebase import FirebaseApplication
 from ollama import Client
 from ollama import ChatResponse
 import datetime
-from pathlib import Path
 import os
 from hntags import hn_firebase
 from hntags import llm
+from hntags import html_gen
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -86,48 +86,6 @@ def retrieve_and_categorise_stories(starttime):
     return categorised_stories, stories
 
 
-def clean_output_directory(path):
-    path = Path(path)
-    indices = path.glob("*.html")
-    for file in indices:
-        file.unlink()
-
-
-def write_category_indices(
-    categorised_stories, render_time, start, output_path, template
-):
-    for category in categorised_stories:
-        print(
-            f"Category: {category} contains {len(categorised_stories.get(category) or [])} stories"
-        )
-        with open(f"{output_path}/{category}.html", "w") as output:
-            output.write(
-                template.render(
-                    {
-                        "page": categorised_stories.get(category) or [],
-                        "render": render_time,
-                        "start": start,
-                        "category": category,
-                    }
-                )
-            )
-
-
-def write_main_index(render_time, start, stories, output_path, template):
-    # Move this stuff into a "writing output" function
-    with open(f"{output_path}/index.html", "w") as output:
-        output.write(
-            template.render(
-                {
-                    "page": stories,
-                    "render": render_time,
-                    "start": start,
-                    "category": "all",
-                }
-            )
-        )
-
-
 def main():
     print(
         f"I will connect to {MODEL_HOST} to run Ollama model {MODEL} with {THREADS} threads and processing {STORIES_IN_PAGE} front page stories"
@@ -138,18 +96,7 @@ def main():
 
     categorised_stories, stories = retrieve_and_categorise_stories(start_time_utc)
 
-    # Loading complete, so capture the timestamp to differentiate when we looked at HN and when we finished rendering
-    render_time = datetime.datetime.now(datetime.timezone.utc)
-
-    template = JINJA2_ENV.get_template("hntags.html")
-
-    output_path = f"{os.getcwd()}/output"
-    print(f"Output path is: {output_path}")
-    clean_output_directory(output_path)
-    write_main_index(render_time, start_time_utc, stories, output_path, template)
-    write_category_indices(
-        categorised_stories, render_time, start_time_utc, output_path, template
-    )
+    html_gen.generate(JINJA2_ENV, start_time_utc, stories, categorised_stories)
 
     # I'm going to want a "publish" step here
 
