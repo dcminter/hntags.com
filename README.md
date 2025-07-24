@@ -4,8 +4,8 @@ Tooling to associate semantic tags with Hacker News stories
 
 ## Usage
 
-I'm using [uv](https://docs.astral.sh/uv/) so this will be something like `uv run main.py` - however since this 
-is not so much "in-progress" as "barely started and clearly unfinished" that's a bit academic for now.
+I'm using [uv](https://docs.astral.sh/uv/) so this will be something like `uv run hntags` - though I do plan to dockerise this
+at some point.
 
 When finished this will parse the Hacker News feed and dump the results as one or more html etc. files suitable
 for use as static content on the [hntags.com](https://hntags.com/) website.
@@ -19,14 +19,16 @@ The tool is configurable via the following environment variables:
 | `HNTAGS_HOST`    | `http://localhost:11434` | The Ollama server to connect to |
 | `HNTAGS_THREADS` | `8`                      | The number of threads to instruct Ollama to use (I find matching the number of cores is usually best with my default model) |
 | `HNTAGS_STORIES` | `30`                     | The number of stories to process for the rendered output - 30 is the number on the HN front page |
+| `HNTAGS_COMMENTS` | `10`                     | The number of top-level comments to take into account when deciding what category to place the story into |
 | `HNTAGS_MODEL`    | `qwen2.5:1.5b`           | The Ollama model to use - this one works well for this simple task and is small enough for an underwhelming CPU |
+
+
 
 ## Status
 
 *Not* yet running regularly or automatically. 
 
-I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs a proper fix. 
-
+  * Restructured into modules as it was getting a bit unwieldy
   * I'm testing out the infrastructure, so a stale version is public on [HNTags.com](https://hntags.com) right now!
   * Cleaner categorisation
   * Renders category pages
@@ -34,7 +36,12 @@ I saw an encoding issue on a story; an em-dash got displayed as `â€“` in st
   * Uses an Ollama client to categorise the stories 
   * Lists all the top story IDs
 
-## Bugs, Weaknesses, Fear, Uncertainty, Doubt
+## Bugs
+
+I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs a proper fix.
+That will likely come *after* the work to get it regularly and automatically publishing though.
+
+## Weaknesses, Fear, Uncertainty, Doubt
 
 This is mostly an excercise to get myself more up to speed on Python. It kinda works, but I'm sure it's not what
 a proper production python application ought to look like. Tips and advice are welcome.
@@ -62,9 +69,10 @@ each story after I've retrieved its content and some of the comments on it. This
 HN Firebase API, but not so good in that the list of "real" top stories is likely to be very different by the time
 I'm ready to render the output. This doesn't seem a big deal for something that's essentially a toy.
 
-On one occasion I saw the model get "stuck" for 20 minutes or so. I should set up some logic to just give up
+~~On one occasion I saw the model get "stuck" for 20 minutes or so. I should set up some logic to just give up
 after some reasonable timeout on any individual story so that I don't blow my time budget before the next run
-starts (I plan to run it hourly).
+starts (I plan to run it hourly).~~ I set a timeout of 120 seconds on the classification; anything longer than 
+that will be treated as no categories.
 
 I don't have any logic in place to check for obnoxiously large top level comments - I should probably discard 
 any comment over a maximum length. That might be the cause of the "stuck" modelling actually.
@@ -89,10 +97,9 @@ copy of their front page to be a starting point for the template.
 I'm using the [Qwen2.5:1.5b model](https://www.ollama.com/library/qwen2.5:1.5b) because it runs at a reasonable speed 
 on my little Linux machine without a GPU.
 
-Next up is to figure out exactly how I'm going to serve these pages and set that up - I want to use CloudFront
-but not sure exactly how I'm going to manage the atomic switching of the content if I push it to S3 instead
-of a real filesystem. ~~Perhaps I'll just run a micro instance with nginx on it or something?~~ Nah, leaning
-towards S3  so I don't burn too much spare time on this. It'll be less good, but good enough for a toy. I have 
-some AWS CLI based upload stuff working fairly manually (including an in-console step where I invalidate the 
-distribution after upload) but I want to move all that into the python side. Probably I should restructure things 
-into not-just-one-giant-file first. Who knows, there might even be tests some day...
+I'm serving [hntags.com](https://hntags.com) via Cloudfront from an S3 bucket. Currently I just have a shell script
+that uploads the files and creates an invalidation, but I'll move that logic into another python module soon.
+
+I think I want to dockerise this stuff before I fully commit to running it on an hourly basis (the plan).
+
+It would be nice to create some proper tests, although it's definitely more fun not doing that :) 

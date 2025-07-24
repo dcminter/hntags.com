@@ -1,5 +1,6 @@
 from ollama import Client
 import datetime
+import httpx
 
 SYSTEM_PROMPT = """
 You will be processing text from a popular discussion site (Hacker News) in the format of stories (which may be simple 
@@ -12,9 +13,7 @@ MUST always be in English. The output MUST never contain words other than the li
 
 def get_ollama_client(host: str):
     print(f"Establishing connection to Ollama host '{host}'")
-    return Client(
-        host=host,
-    )
+    return Client(host=host, timeout=120)
 
 
 def sanitised_categories(categories):
@@ -43,9 +42,17 @@ def categorise_story_and_comments(
 
     start = datetime.datetime.now()
     print(f"Making request to ollama with model '{model}' at {start} (Local time)")
-    ollama_response: ChatResponse = ollama_client.chat(
-        model=model, options={"num_thread": threads}, messages=context
-    )
+    try:
+        ollama_response: ChatResponse = ollama_client.chat(
+            model=model, options={"num_thread": threads}, messages=context
+        )
+    except httpx.ReadTimeout as error:
+        finish = datetime.datetime.now()
+        print(
+            f"Timeout received at {finish} (Local time) taking {(finish - start).total_seconds()} seconds to failure"
+        )
+        return []
+
     finish = datetime.datetime.now()
     print(
         f"Response received at {finish} (Local time) taking {(finish - start).total_seconds()} seconds to complete"
