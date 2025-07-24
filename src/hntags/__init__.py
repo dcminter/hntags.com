@@ -5,6 +5,7 @@ import datetime
 from pathlib import Path
 import os
 from hntags import hn_firebase
+from hntags import llm
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -12,24 +13,12 @@ JINJA2_ENV = Environment(
     loader=PackageLoader("hntags", "template"), autoescape=select_autoescape()
 )
 
-SYSTEM_PROMPT = """
-You will be processing text from a popular discussion site (Hacker News) in the format of stories (which may be simple 
-URLs or text) and the top-level comments replying to them. You SHOULD infer from the comments and story details a short 
-set of comma-separated categories that the story falls into. At MOST five categories should be listed; single-word 
-category names are preferable but a category name SHOULD never exceed two words. Thus an absurd example list might be 
-"AI, Hats, Short Sticks." Prefer simpler category names; "AI" is preferable to "AI Software" for example. The output 
-MUST always be in English. The output MUST never contain words other than the list of categories itself."""
-
-HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
+MODEL_HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
 MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
 THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
 STORIES_IN_PAGE = int(os.environ.get("HNTAGS_STORIES", 30))
 MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
 MAX_COMMENTS = int(os.environ.get("HNTAGS_COMMENTS", 10))
-
-client = Client(
-    host=HOST,
-)
 
 
 def get_stories(db):
@@ -38,50 +27,14 @@ def get_stories(db):
     return top_story_ids
 
 
-def sanitised_categories(categories):
-    categories = [category for category in categories if len(category.split(" ")) <= 2]
-    for index, category in enumerate(categories):
-        if "/" in category:
-            all = category.split("/")
-            categories[index : index + 1] = all
-    return categories
-
-
-def ask_the_llama(story, comments):
-    context = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": story},
-    ]
-    for comment in comments:
-        context.append({"role": "user", "content": comment})
-
-    start = datetime.datetime.now()
-    print(
-        f"Making request to ollama (on '{HOST}', with model '{MODEL}' at {start} (Local time)"
-    )
-    response: ChatResponse = client.chat(
-        model=MODEL, options={"num_thread": THREADS}, messages=context
-    )
-    finish = datetime.datetime.now()
-    print(
-        f"Response received at {finish} (Local time) taking {(finish - start).total_seconds()} seconds to complete"
-    )
-
-    categories = list(map(str.strip, response.message.content.split(",")))
-    categories = [category.lower() for category in categories]
-    for category in categories:
-        print(f"Category: {category}")
-
-    # I constrain this a lot so that (hopefully) we only get genuinely relevant categories
-    return sanitised_categories(categories[:MAX_CATEGORIES])[:MAX_CATEGORIES]
-
-
-def process_comments(firebase: FirebaseApplication, id: str, max_comments: int):
-    raw_story = hn_firebase.get_raw_story(firebase, id)
-    print(f"Retrieved story with id {id} and title '{raw_story.get('title')}'")
+def process_comments(
+    ollama_client, firebase: FirebaseApplication, story_id: str, max_comments: int
+):
+    raw_story = hn_firebase.get_raw_story(firebase, story_id)
+    print(f"Retrieved story with id {story_id} and title '{raw_story.get('title')}'")
 
     if not raw_story.get("dead") and not raw_story.get("deleted"):
-        story_text = f"""Story: {raw_story["title"]}, ID: {id}
+        story_text = f"""Story: {raw_story["title"]}, ID: {story_id}
             By: {raw_story.get("by")}, Time: {raw_story.get("time")}, Score: {raw_story.get("score")}, Dead: {raw_story.get("dead")}, Deleted: {raw_story.get("deleted")}
             {raw_story.get("text") or raw_story.get("url")}"""
 
@@ -100,7 +53,9 @@ def process_comments(firebase: FirebaseApplication, id: str, max_comments: int):
         print()
 
         print("All comments retrieved for this story")
-        raw_story["tags"] = ask_the_llama(story_text, comments)
+        raw_story["tags"] = llm.categorise_story_and_comments(
+            ollama_client, MODEL, THREADS, story_text, comments, MAX_CATEGORIES
+        )
         raw_story["comment_count"] = comment_count
         return raw_story
     else:
@@ -112,6 +67,7 @@ def process_comments(firebase: FirebaseApplication, id: str, max_comments: int):
 
 def retrieve_and_categorise_stories(starttime):
     firebase = hn_firebase.get_hn_firebase_connection()
+    ollama_client = llm.get_ollama_client(MODEL_HOST)
     story_ids = hn_firebase.get_top_story_ids(firebase, STORIES_IN_PAGE)
     stories = []
     categorised_stories = {}
@@ -120,7 +76,7 @@ def retrieve_and_categorise_stories(starttime):
             f"Elapsed time so far: {(datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()} seconds"
         )
         print(f"Processing comments for story {index + 1} of {STORIES_IN_PAGE}")
-        story = process_comments(firebase, story_id, MAX_COMMENTS)
+        story = process_comments(ollama_client, firebase, story_id, MAX_COMMENTS)
         story["index"] = index
         stories.append(story)
         for tag in story.get("tags") or []:
@@ -174,7 +130,7 @@ def write_main_index(render_time, start, stories, output_path, template):
 
 def main():
     print(
-        f"I will connect to {HOST} to run Ollama model {MODEL} with {THREADS} threads and processing {STORIES_IN_PAGE} front page stories"
+        f"I will connect to {MODEL_HOST} to run Ollama model {MODEL} with {THREADS} threads and processing {STORIES_IN_PAGE} front page stories"
     )
 
     start_time_utc = datetime.datetime.now(datetime.timezone.utc)
