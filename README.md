@@ -7,27 +7,39 @@ Tooling to associate semantic tags with Hacker News stories
 I'm using [uv](https://docs.astral.sh/uv/) so this will be something like `uv run hntags` - though I do plan to dockerise this
 at some point.
 
-When finished this will parse the Hacker News feed and dump the results as one or more html etc. files suitable
-for use as static content on the [hntags.com](https://hntags.com/) website.
+When finished this will parse the Hacker News feed and upload the results as one or more html etc. files as 
+static content on the [hntags.com](https://hntags.com/) website.
 
 ## Environment variables
 
 The tool is configurable via the following environment variables:
 
-| Variable         | Default                  | Meaning |
-|------------------|--------------------------| --- |
-| `HNTAGS_HOST`    | `http://localhost:11434` | The Ollama server to connect to |
+| Variable         | Default                  | Meaning                                                                                                                     |
+|------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `HNTAGS_HOST`    | `http://localhost:11434` | The Ollama server to connect to                                                                                             |
 | `HNTAGS_THREADS` | `8`                      | The number of threads to instruct Ollama to use (I find matching the number of cores is usually best with my default model) |
-| `HNTAGS_STORIES` | `30`                     | The number of stories to process for the rendered output - 30 is the number on the HN front page |
-| `HNTAGS_COMMENTS` | `10`                     | The number of top-level comments to take into account when deciding what category to place the story into |
-| `HNTAGS_MODEL`    | `qwen2.5:1.5b`           | The Ollama model to use - this one works well for this simple task and is small enough for an underwhelming CPU |
+| `HNTAGS_STORIES` | `30`                     | The number of stories to process for the rendered output - 30 is the number on the HN front page                            |
+| `HNTAGS_COMMENTS` | `10`                    | The number of top-level comments to take into account when deciding what category to place the story into                   |
+| `HNTAGS_MODEL`    | `qwen2.5:1.5b`          | The Ollama model to use - this one works well for this simple task and is small enough for an underwhelming CPU             |
+| `BUCKET_NAME`     | -                       | Must be explicitly set. The S3 bucket into which the content will be pushed.                                                |
+| `DISTRIBUTION_ID` | -                       | Must be explicitly set. The CloudFront distribution that will be invalidated after the push to S3 is complete.              |
 
+I'm using [Boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) from AWS to do the cloud
+operations (push files to S3 and invalidate the CloudFront distribution). That allows for [various mechanisms for
+the library to be configured](https://boto3.amazonaws.com/v1/documentation/api/1.14.23/guide/configuration.html), 
+but as I'm running on a machine outside AWS I'm setting the following standard AWS environment variables:
 
+| Variable                | Default | Meaning                                                                                                                  |
+|-------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
+| `AWS_DEFAULT_REGION`    | -       | The AWS Region for any AWS resources to be used when accessing via boto3                                                 |
+| `AWS_ACCESS_KEY_ID`     | -       | The ID of the access key to be used to do the S3 push and CloudFront distribution invalidation                           |
+| `AWS_SECRET_ACCESS_KEY` | -       | The secret access key to be used - this **MUST BE KEPT SECRET, DO NOT CHECK THIS VALUE INTO YOUR REPOSITORY OR LOG IT!** |
 
 ## Status
 
 *Not* yet running regularly or automatically. 
 
+  * Publishes to AWS directly (instead of external scripts)
   * Restructured into modules as it was getting a bit unwieldy
   * I'm testing out the infrastructure, so a stale version is public on [HNTags.com](https://hntags.com) right now!
   * Cleaner categorisation
@@ -92,11 +104,12 @@ copy of their front page to be a starting point for the template.
 I'm using the [Qwen2.5:1.5b model](https://www.ollama.com/library/qwen2.5:1.5b) because it runs at a reasonable speed 
 on my little Linux machine without a GPU.
 
-I'm serving [hntags.com](https://hntags.com) via Cloudfront from an S3 bucket. Currently I just have a shell script
-that uploads the files and creates an invalidation, but I'll move that logic into another python module soon. Writing 
-all the files to the S3 bucket isn't atomic - however by updating the index.html file last I should avoid the worst
-user-visible issues (at worst they'll navigate to a topic page that shows topics that weren't on the index page they
-just visited)
+I'm using [Boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) from AWS for the cloud operations.
+
+I'm serving [hntags.com](https://hntags.com) via Cloudfront from an S3 bucket.  Writing all the files to the S3 bucket isn't 
+atomic. I don't invalidate the distribution until after I've uploaded all the files to S3 though, so only a user for
+whom the files are not in CloudFront's cache will ever see that. It's a bit janky, but will do for now. I may improve
+this later by adjusting the update to upload the `index.html` file after the category files.
 
 A side effect is that I'm slowly filling my S3 bucket with stale category pages. I should create a batch job
 to go and delete those periodically. I did consider setting up two different S3 buckets (or folders within the bucket)
@@ -104,10 +117,16 @@ and changing the distribution origin after each set of files is uploaded - then 
 bucket/folder after each push. However that feels like a potentially fragile approach and it's probably solving for
 a problem (an expensive amount of data in the bucket) that I'll never really have. S3 is very cheap. We'll see.
 
+It occurred to me that if I end up with a category of "index" then I would overwrite my front page! I modified so 
+that the front page is generated last, so worst case we'll end up with the "index" category pointing at the front
+page instead of a dedicated category page. Uh. Let's call that an easter egg and hope it never happens.
+
 Bugfix: ~~I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs 
 a proper fix. That will likely come *after* the work to get it regularly and automatically publishing though.~~ the
 files served from the S3 bucket weren't declared as using the UTF-8 charset as part of the content type header. I've
-therefore added a meta tag in the template to declare this inline.
+therefore added a meta tag in the template to declare this inline. Oh and I later realised that the reason S3 wasn't 
+returning the desired charset in the content type was that I hadn't told it to when uploading the file via the AWS CLI.
+This is *also* fixed in the boto3 based uploading now - but I left the meta tag in the template as a belt & braces fix.
 
 I think I want to dockerise this stuff before I fully commit to running it on an hourly basis (the plan).
 

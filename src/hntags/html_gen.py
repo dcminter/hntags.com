@@ -64,7 +64,7 @@ def generate(start_time_utc: datetime, stories, categorised_stories):
     print(f"Output path is: {output_path}")
     clean_output_directory(output_path)
 
-    write_main_index(render_time_utc, start_time_utc, stories, output_path, template)
     write_category_indices(
         categorised_stories, render_time_utc, start_time_utc, output_path, template
     )
+    write_main_index(render_time_utc, start_time_utc, stories, output_path, template)

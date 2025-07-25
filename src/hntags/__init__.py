@@ -6,6 +6,7 @@ from hntags import hn_firebase
 from hntags import llm
 from hntags import html_gen
 from hntags import hntags
+from hntags import publish
 
 MODEL_HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
 MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
@@ -13,6 +14,8 @@ THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
 STORIES_IN_PAGE = int(os.environ.get("HNTAGS_STORIES", 30))
 MAX_COMMENTS = int(os.environ.get("HNTAGS_COMMENTS", 10))
 MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
+DISTRIBUTION_ID = os.environ.get("DISTRIBUTION_ID")
+BUCKET_NAME = os.environ.get("BUCKET_NAME")
 
 
 def main():
@@ -48,7 +51,8 @@ def main():
         categorised_stories=categorised_stories,
     )
 
-    # I'm going to want a "publish" step here
+    # Push everything up to be served publicly
+    publish.publish(BUCKET_NAME, DISTRIBUTION_ID)
 
     finish = datetime.datetime.now(datetime.timezone.utc)
     print(
