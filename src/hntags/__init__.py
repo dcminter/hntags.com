@@ -1,4 +1,3 @@
-from firebase.firebase import FirebaseApplication
 from ollama import Client
 from ollama import ChatResponse
 import datetime
@@ -31,10 +30,14 @@ def main():
     print(f"Run started at {start_time_utc} (UTC)")
 
     # Retrieve & categorise the stories
+    firebase = hn_firebase.get_hn_firebase_connection()
+    classifier = llm.Classifier(
+        client=llm.get_ollama_client(MODEL_HOST), model=MODEL, threads=THREADS
+    )
+
     categorised_stories, stories = hntags.retrieve_and_categorise_stories(
-        model_host=MODEL_HOST,
-        model=MODEL,
-        threads=THREADS,
+        firebase=firebase,
+        classifier=classifier,
         stories_in_page=STORIES_IN_PAGE,
         max_comments=MAX_COMMENTS,
         max_categories=MAX_CATEGORIES,

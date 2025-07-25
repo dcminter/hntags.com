@@ -6,10 +6,8 @@ import datetime
 
 
 def process_comments(
-    ollama_client: Client,
     firebase: FirebaseApplication,
-    model: str,
-    threads: int,
+    classifier: llm.Classifier,
     story_id: str,
     max_comments: int,
     max_categories: int,
@@ -25,20 +23,23 @@ def process_comments(
         # It makes no sense to drag in ALL top level comments. Let's truncate it to max_comments and assume those cover the gist
         comment_ids = raw_story.get("kids") or []
         comment_ids = comment_ids[:max_comments]
-        comments = []
+        comment_texts = []
         comment_count = len(comment_ids)
-        print(f"Retrieving {comment_count} comments", end="", flush=True)
+        print(f"Retrieving {comment_count} comment_texts", end="", flush=True)
         for index, comment_id in enumerate(comment_ids):
             print(".", end="", sep="", flush=True)
             raw_comment = hn_firebase.get_raw_comment(firebase, comment_id)
             comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
                     {raw_comment.get("text") or ""}"""
-            comments.append(comment_text)
+            comment_texts.append(comment_text)
         print()
 
-        print("All comments retrieved for this story")
+        print("All comment_texts retrieved for this story")
         raw_story["tags"] = llm.categorise_story_and_comments(
-            ollama_client, model, threads, story_text, comments, max_categories
+            classifier=classifier,
+            story_text=story_text,
+            comment_texts=comment_texts,
+            max_categories=max_categories,
         )
         raw_story["comment_count"] = comment_count
         return raw_story
@@ -50,16 +51,13 @@ def process_comments(
 
 
 def retrieve_and_categorise_stories(
-    model_host: str,
-    model: str,
-    threads: int,
+    firebase: FirebaseApplication,
+    classifier: llm.Classifier,
     stories_in_page: int,
     max_comments: int,
     max_categories: int,
     start_time_utc: datetime,
 ):
-    firebase = hn_firebase.get_hn_firebase_connection()
-    ollama_client = llm.get_ollama_client(model_host)
     story_ids = hn_firebase.get_top_story_ids(firebase, stories_in_page)
     stories = []
     categorised_stories = {}
@@ -70,10 +68,8 @@ def retrieve_and_categorise_stories(
         )
         print(f"Processing comments for story {index + 1} of {stories_in_page}")
         story = process_comments(
-            ollama_client=ollama_client,
+            classifier=classifier,
             firebase=firebase,
-            model=model,
-            threads=threads,
             story_id=story_id,
             max_comments=max_comments,
             max_categories=max_categories,

@@ -98,7 +98,7 @@ all the files to the S3 bucket isn't atomic - however by updating the index.html
 user-visible issues (at worst they'll navigate to a topic page that shows topics that weren't on the index page they
 just visited)
 
-A slightly side effect is that I'm slowly filling my S3 bucket with stale category pages. I should create a batch job
+A side effect is that I'm slowly filling my S3 bucket with stale category pages. I should create a batch job
 to go and delete those periodically. I did consider setting up two different S3 buckets (or folders within the bucket)
 and changing the distribution origin after each set of files is uploaded - then I could empty the inactive 
 bucket/folder after each push. However that feels like a potentially fragile approach and it's probably solving for

@@ -1,6 +1,14 @@
 from ollama import Client
+from typing import NamedTuple
 import datetime
 import httpx
+
+
+class Classifier(NamedTuple):
+    client: Client
+    model: str
+    threads: int
+
 
 SYSTEM_PROMPT = """
 You will be processing text from a popular discussion site (Hacker News) in the format of stories (which may be simple 
@@ -26,25 +34,27 @@ def sanitised_categories(categories):
 
 
 def categorise_story_and_comments(
-    ollama_client: Client,
-    model: str,
-    threads: int,
-    story: str,
+    classifier: Classifier,
+    story_text: str,
     comment_texts: list[str],
-    max_categories,
+    max_categories: int,
 ):
     context = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": story},
+        {"role": "user", "content": story_text},
     ]
     for comment_text in comment_texts:
         context.append({"role": "user", "content": comment_text})
 
     start = datetime.datetime.now()
-    print(f"Making request to ollama with model '{model}' at {start} (Local time)")
+    print(
+        f"Making request to ollama with model '{classifier.model}' at {start} (Local time)"
+    )
     try:
-        ollama_response: ChatResponse = ollama_client.chat(
-            model=model, options={"num_thread": threads}, messages=context
+        ollama_response: ChatResponse = classifier.client.chat(
+            model=classifier.model,
+            options={"num_thread": classifier.threads},
+            messages=context,
         )
     except httpx.ReadTimeout as error:
         finish = datetime.datetime.now()
