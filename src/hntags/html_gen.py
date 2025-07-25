@@ -1,4 +1,4 @@
-from jinja2 import Environment, Template
+from jinja2 import Environment, PackageLoader, Template, select_autoescape
 from pathlib import Path
 import os
 import datetime
@@ -51,9 +51,11 @@ def clean_output_directory(path):
         file.unlink()
 
 
-def generate(
-    environment: Environment, start_time_utc: datetime, stories, categorised_stories
-):
+def generate(start_time_utc: datetime, stories, categorised_stories):
+    environment = Environment(
+        loader=PackageLoader("hntags", "template"), autoescape=select_autoescape()
+    )
+
     # Capture the timestamp to differentiate when we looked at HN and when we finished rendering
     render_time_utc = datetime.datetime.now(datetime.timezone.utc)
 

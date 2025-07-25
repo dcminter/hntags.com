@@ -7,12 +7,6 @@ from hntags import llm
 from hntags import html_gen
 from hntags import hntags
 
-from jinja2 import Environment, PackageLoader, select_autoescape
-
-JINJA2_ENV = Environment(
-    loader=PackageLoader("hntags", "template"), autoescape=select_autoescape()
-)
-
 MODEL_HOST = os.environ.get("HNTAGS_HOST", "http://localhost:11434")
 MODEL = os.environ.get("HNTAGS_MODEL", "qwen2.5:1.5b")
 THREADS = int(os.environ.get("HNTAGS_THREADS", 8))
@@ -48,7 +42,11 @@ def main():
     )
 
     # Generate the output files into a working directory (always `./output` relative to the working directory)
-    html_gen.generate(JINJA2_ENV, start_time_utc, stories, categorised_stories)
+    html_gen.generate(
+        start_time_utc=start_time_utc,
+        stories=stories,
+        categorised_stories=categorised_stories,
+    )
 
     # I'm going to want a "publish" step here
 
