@@ -1,8 +1,15 @@
 from firebase.firebase import FirebaseApplication
+from typing import NamedTuple
 from ollama import Client
 from hntags import hn_firebase
 from hntags import llm
 import datetime
+
+
+class Ingestion(NamedTuple):
+    max_stories: int
+    max_comments: int
+    max_categories: int
 
 
 def process_comments(
@@ -53,12 +60,12 @@ def process_comments(
 def retrieve_and_categorise_stories(
     firebase: FirebaseApplication,
     classifier: llm.Classifier,
-    stories_in_page: int,
-    max_comments: int,
-    max_categories: int,
+    ingestion: Ingestion,
     start_time_utc: datetime,
 ):
-    story_ids = hn_firebase.get_top_story_ids(firebase, stories_in_page)
+    story_ids = hn_firebase.get_top_story_ids(
+        firebase=firebase, max_stories=ingestion.max_stories
+    )
     stories = []
     categorised_stories = {}
 
@@ -66,13 +73,13 @@ def retrieve_and_categorise_stories(
         print(
             f"Elapsed time so far: {(datetime.datetime.now(datetime.timezone.utc) - start_time_utc).total_seconds()} seconds"
         )
-        print(f"Processing comments for story {index + 1} of {stories_in_page}")
+        print(f"Processing comments for story {index + 1} of {ingestion.max_stories}")
         story = process_comments(
             classifier=classifier,
             firebase=firebase,
             story_id=story_id,
-            max_comments=max_comments,
-            max_categories=max_categories,
+            max_comments=ingestion.max_comments,
+            max_categories=ingestion.max_categories,
         )
 
         story["index"] = index

@@ -34,13 +34,16 @@ def main():
     classifier = llm.Classifier(
         client=llm.get_ollama_client(MODEL_HOST), model=MODEL, threads=THREADS
     )
+    ingestion = hntags.Ingestion(
+        max_stories=STORIES_IN_PAGE,
+        max_comments=MAX_COMMENTS,
+        max_categories=MAX_CATEGORIES,
+    )
 
     categorised_stories, stories = hntags.retrieve_and_categorise_stories(
         firebase=firebase,
         classifier=classifier,
-        stories_in_page=STORIES_IN_PAGE,
-        max_comments=MAX_COMMENTS,
-        max_categories=MAX_CATEGORIES,
+        ingestion=ingestion,
         start_time_utc=start_time_utc,
     )
 
