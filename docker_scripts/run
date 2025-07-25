@@ -1,0 +1,4 @@
+#!/bin/bash
+# Script to set up environment and run hntags
+source .venv/bin/activate
+hntags

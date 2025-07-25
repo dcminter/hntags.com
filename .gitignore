@@ -16,4 +16,4 @@ output/
 .idea/
 
 # Local scripts
-run
+local_test
