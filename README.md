@@ -4,11 +4,36 @@ Tooling to associate semantic tags with Hacker News stories
 
 ## Usage
 
-I'm using [uv](https://docs.astral.sh/uv/) so this will be something like `uv run hntags` - though I do plan to dockerise this
-at some point.
+You can run this in various ways; easiest for local use is to use [`uv`](https://docs.astral.sh/uv/)  in which case
+it can be run with `uv run hntags` - once you've set the appropriate [environment variables](#environment-variables).
 
-When finished this will parse the Hacker News feed and upload the results as one or more html etc. files as 
-static content on the [hntags.com](https://hntags.com/) website.
+Alternatively, I'm pushing a suitable docker image as `ghcr.io/dcminter/hntags` - these are tagged with the commit
+hash, but the most recent is always `ghcr.io/dcminter/hntags:latest` - as such something like the following
+incantation (including environment variables) should work too:
+
+```bash
+docker run \
+  -e HNTAGS_HOST=<HOSTNAME> \
+  -e HNTAGS_THREADS=8 \
+  -e HNTAGS_STORIES=30 \
+  -e HNTAGS_COMMENTS=5 \
+  -e HNTAGS_MODEL=qwen2.5:1.5b \
+  -e BUCKET_NAME=<BUCKET> \
+  -e DISTRIBUTION_ID=<DISTRIBUTION> \
+  -e AWS_DEFAULT_REGION=<REGION> \
+  -e AWS_ACCESS_KEY_ID=<ACCESSKEYID> \
+  -e AWS_SECRET_ACCESS_KEY=<ACCESSKEY> \
+  ghcr.io/dcminter/hntags:latest
+```
+
+Inside the Docker image, however, the tool is run by doing a `uv sync` to update the Python virtual environment, then 
+activating that and running the hntags command - i.e.
+
+```bash
+uv sync
+source .venv/bin/activate
+hntags
+```
 
 ## Environment variables
 
@@ -47,6 +72,22 @@ but as I'm running on a machine outside AWS I'm setting the following standard A
   * Renders something that looks a bit like an HN page
   * Uses an Ollama client to categorise the stories 
   * Lists all the top story IDs
+
+## Prompt
+
+I wouldn't say I was entirely comfortable with our brave new LLM future just yet - the circumstance where I politely
+ask the computer to do stuff for me rather than writing a bunch of code is a bit weird. It's quite cool though. Here's
+the prompt I'm using for the categorisation:
+
+> You will be processing text from a popular discussion site (Hacker News) in the format of stories (which may be simple 
+URLs or text) and the top-level comments replying to them. You SHOULD infer from the comments and story details a short 
+set of comma-separated categories that the story falls into. At MOST five categories should be listed; single-word 
+category names are preferable but a category name SHOULD never exceed two words. Thus an absurd example list might be 
+"AI, Hats, Short Sticks." Prefer simpler category names; "AI" is preferable to "AI Software" for example. The output 
+MUST always be in English. The output MUST never contain words other than the list of categories itself.
+
+It's quite "talking to the Enterprise computer" feeling, even if I slipped into RFC-ese a bit there. The behaviour is
+reasonable given the underpowered model that I use.
 
 ## Weaknesses, Fear, Uncertainty, Doubt
 
