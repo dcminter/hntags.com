@@ -35,6 +35,8 @@ source .venv/bin/activate
 hntags
 ```
 
+In practice I'm using the dockerised version running hourly under a systemd timer.
+
 ## Environment variables
 
 The tool is configurable via the following environment variables:
@@ -62,8 +64,9 @@ but as I'm running on a machine outside AWS I'm setting the following standard A
 
 ## Status
 
-*Not* yet running regularly or automatically. 
-
+  * [Blog post written/posted](https://paperstack.com/hntags/)
+  * Running hourly
+  * Dockerised
   * Publishes to AWS directly (instead of external scripts)
   * Restructured into modules as it was getting a bit unwieldy
   * I'm testing out the infrastructure, so a stale version is public on [HNTags.com](https://hntags.com) right now!
@@ -122,15 +125,19 @@ after some reasonable timeout on any individual story so that I don't blow my ti
 starts (I plan to run it hourly).~~ I set a timeout of 120 seconds on the classification; anything longer than 
 that will be treated as no categories.
 
-I don't have any logic in place to check for obnoxiously large top level comments - I should probably discard 
+I still don't have any logic in place to check for obnoxiously large top level comments - I should probably discard 
 any comment over a maximum length. That might be the cause of the "stuck" modelling actually.
 
-I'm trusting the content of the story title and the first 10 top level comments to be adequate to characterise
+I'm trusting the content of the story title and the first few top level comments to be adequate to characterise
 the topic of the story. Works pretty well on all my test runs, so I'm going to stick with that (though I might
 reduce the number of comments to speed things up a bit if the output still seems more-or-less accurate)
 
 Someone ingenious can probably create a top level comment that messes with my output in ghastly ways; that
 will be interesting! Please tell me if you succeeded...
+
+The baseline assumption is that I'm the only user of this tool, so there's no configuration to disable the S3
+upload or invalidation creation. I might put in some logic later to disable that if the corresponding environment
+variables aren't set.
 
 ## Notes
 
@@ -156,19 +163,14 @@ A side effect is that I'm slowly filling my S3 bucket with stale category pages.
 to go and delete those periodically. I did consider setting up two different S3 buckets (or folders within the bucket)
 and changing the distribution origin after each set of files is uploaded - then I could empty the inactive 
 bucket/folder after each push. However that feels like a potentially fragile approach and it's probably solving for
-a problem (an expensive amount of data in the bucket) that I'll never really have. S3 is very cheap. We'll see.
+a problem (an expensive amount of data in the bucket) that I'll never really have. S3 is very cheap unless
+you go really wild. We'll see.
 
 It occurred to me that if I end up with a category of "index" then I would overwrite my front page! I modified so 
 that the front page is generated last, so worst case we'll end up with the "index" category pointing at the front
 page instead of a dedicated category page. Uh. Let's call that an easter egg and hope it never happens.
 
-Bugfix: ~~I saw an encoding issue on a story; an em-dash got displayed as `â€“` in story 44561516 so that needs 
-a proper fix. That will likely come *after* the work to get it regularly and automatically publishing though.~~ the
-files served from the S3 bucket weren't declared as using the UTF-8 charset as part of the content type header. I've
-therefore added a meta tag in the template to declare this inline. Oh and I later realised that the reason S3 wasn't 
-returning the desired charset in the content type was that I hadn't told it to when uploading the file via the AWS CLI.
-This is *also* fixed in the boto3 based uploading now - but I left the meta tag in the template as a belt & braces fix.
-
-I think I want to dockerise this stuff before I fully commit to running it on an hourly basis (the plan).
-
 It would be nice to create some proper tests, although it's definitely more fun not doing that :) 
+
+I'm running the local service under a 
+[systemd timer](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html) hourly.
