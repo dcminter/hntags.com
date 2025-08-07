@@ -73,5 +73,6 @@ def categorise_story_and_comments(
     for category in categories:
         print(f"Category: {category}")
 
-    # I constrain this a lot so that (hopefully) we only get genuinely relevant categories
-    return sanitised_categories(categories[:max_categories])[:max_categories]
+    # I constrain this a lot so that (hopefully) we only get genuinely relevant categories - also filtering
+    # out any dupes here.
+    return list(set(sanitised_categories(categories[:max_categories])[:max_categories]))
