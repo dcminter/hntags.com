@@ -26,11 +26,10 @@ docker run \
   ghcr.io/dcminter/hntags:latest
 ```
 
-Inside the Docker image, however, the tool is run by doing a `uv sync` to update the Python virtual environment, then 
-activating that and running the hntags command - i.e.
+Inside the Docker image, however, the tool is run by doing a `source .venv/bin/activate` to update the Python virtual 
+environment, then activating that and running the hntags command - i.e.
 
 ```bash
-uv sync
 source .venv/bin/activate
 hntags
 ```
@@ -41,15 +40,16 @@ In practice I'm using the dockerised version running hourly under a systemd time
 
 The tool is configurable via the following environment variables:
 
-| Variable         | Default                  | Meaning                                                                                                                     |
-|------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| `HNTAGS_HOST`    | `http://localhost:11434` | The Ollama server to connect to                                                                                             |
-| `HNTAGS_THREADS` | `8`                      | The number of threads to instruct Ollama to use (I find matching the number of cores is usually best with my default model) |
-| `HNTAGS_STORIES` | `30`                     | The number of stories to process for the rendered output - 30 is the number on the HN front page                            |
-| `HNTAGS_COMMENTS` | `10`                    | The number of top-level comments to take into account when deciding what category to place the story into                   |
-| `HNTAGS_MODEL`    | `qwen2.5:1.5b`          | The Ollama model to use - this one works well for this simple task and is small enough for an underwhelming CPU             |
-| `BUCKET_NAME`     | -                       | Must be explicitly set. The S3 bucket into which the content will be pushed.                                                |
-| `DISTRIBUTION_ID` | -                       | Must be explicitly set. The CloudFront distribution that will be invalidated after the push to S3 is complete.              |
+| Variable           | Default                  | Meaning                                                                                                                     |
+|--------------------|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `HNTAGS_HOST`      | `http://localhost:11434` | The Ollama server to connect to                                                                                             |
+| `HNTAGS_THREADS`   | `8`                      | The number of threads to instruct Ollama to use (I find matching the number of cores is usually best with my default model) |
+| `HNTAGS_STORIES`   | `30`                     | The number of stories to process for the rendered output - 30 is the number on the HN front page                            |
+| `HNTAGS_COMMENTS`  | `10`                     | The number of top-level comments to take into account when deciding what category to place the story into                   |
+| `HNTAGS_MODEL`     | `qwen2.5:1.5b`           | The Ollama model to use - this one works well for this simple task and is small enough for an underwhelming CPU             |
+| `BUCKET_NAME`      | -                        | Must be explicitly set. The S3 bucket into which the content will be pushed.                                                |
+| `DISTRIBUTION_ID`  | -                        | Must be explicitly set. The CloudFront distribution that will be invalidated after the push to S3 is complete.              |
+| `STATSD_HOST`      | localhost                | The host on which a statsd UDP listener is present (UDP so if nothing's listening there should be no problem)               |
 
 I'm using [Boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) from AWS to do the cloud
 operations (push files to S3 and invalidate the CloudFront distribution). That allows for [various mechanisms for
@@ -91,6 +91,8 @@ MUST always be in English. The output MUST never contain words other than the li
 
 It's quite "talking to the Enterprise computer" feeling, even if I slipped into RFC-ese a bit there. The behaviour is
 reasonable given the underpowered model that I use.
+
+(mid-2026 note - the above seems positively quaint now we're all yolo-ing our hearts out in Claude Code)
 
 ## Weaknesses, Fear, Uncertainty, Doubt
 

@@ -12,6 +12,7 @@ dependencies = [
     "firebase>=4.0.1",
     "jinja2>=3.1.6",
     "ollama>=0.5.1",
+    "statsd>=4.0.1",
 ]
 
 [project.scripts]

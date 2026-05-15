@@ -2,6 +2,7 @@ from ollama import Client
 from ollama import ChatResponse
 import datetime
 import os
+import statsd
 from hntags import hn_firebase
 from hntags import llm
 from hntags import html_gen
@@ -16,6 +17,7 @@ MAX_COMMENTS = int(os.environ.get("HNTAGS_COMMENTS", 10))
 MAX_CATEGORIES = int(os.environ.get("HNTAGS_CATEGORIES", 3))
 DISTRIBUTION_ID = os.environ.get("DISTRIBUTION_ID")
 BUCKET_NAME = os.environ.get("BUCKET_NAME")
+STATSD_HOST = os.environ.get("STATSD_HOST", "localhost")
 
 
 def main():
@@ -23,8 +25,13 @@ def main():
         f"I will connect to {MODEL_HOST} to run Ollama model {MODEL} with {THREADS} threads and processing {STORIES_IN_PAGE} front page stories"
     )
 
+    print(f"I will send metrics to {STATSD_HOST}")
+
     start_time_utc = datetime.datetime.now(datetime.timezone.utc)
     print(f"Run started at {start_time_utc} (UTC)")
+
+    # Setup the statsd client
+    stats = statsd.StatsClient(STATSD_HOST, 8125, prefix="hntags")
 
     # Retrieve & categorise the stories
     firebase = hn_firebase.get_hn_firebase_connection()
@@ -55,9 +62,15 @@ def main():
     publish.publish(BUCKET_NAME, DISTRIBUTION_ID)
 
     finish = datetime.datetime.now(datetime.timezone.utc)
+
+    total_run_time_seconds = (finish - start_time_utc).total_seconds()
+    categorised_stories = len(categorised_stories)
+
     print(
-        f"Run finished at {finish} (Local time) after {(finish - start_time_utc).total_seconds()} seconds with {len(categorised_stories)} total categories identified."
+        f"Run finished at {finish} (Local time) after {total_run_time_seconds} seconds with {categorised_stories} total categories identified."
     )
+
+    stats.timing("runtime_seconds", total_run_time_seconds)
 
 
 # I am clueless... is this necessary/useful?
