@@ -1,5 +1,5 @@
 # Effectively this will be debian:bookworm-slim - see https://docs.astral.sh/uv/guides/integration/docker/#available-images
-FROM ghcr.io/astral-sh/uv:debian-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 RUN mkdir -p /hntags/output
 WORKDIR /hntags
 COPY src src

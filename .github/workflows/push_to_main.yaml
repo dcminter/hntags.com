@@ -7,6 +7,10 @@ on:
 jobs:
   login-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -15,7 +19,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.REGISTRY_SECRET }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build image
         run: docker build -t ghcr.io/dcminter/hntags:${{ github.sha }} -t ghcr.io/dcminter/hntags:latest .
       - name: List images
