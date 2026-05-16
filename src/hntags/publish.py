@@ -3,6 +3,8 @@ import os
 import uuid
 from os import walk
 
+from statsd import StatsClient
+
 
 def push_files(bucket_name: str):
     s3 = boto3.resource("s3")
@@ -37,6 +39,9 @@ def create_invalidation(distribution_id: str):
     print(f"Invalidation response: {response}")
 
 
-def publish(bucket_name: str, distribution_id: str):
-    push_files(bucket_name)
-    create_invalidation(distribution_id)
+def publish(bucket_name: str, distribution_id: str, stats_client: StatsClient):
+    with stats_client.timer("push_files_to_bucket"):
+        push_files(bucket_name)
+
+    with stats_client.timer("invalidate_old_distribution"):
+        create_invalidation(distribution_id)

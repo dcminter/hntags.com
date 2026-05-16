@@ -31,46 +31,47 @@ def main():
     print(f"Run started at {start_time_utc} (UTC)")
 
     # Setup the statsd client
-    stats = statsd.StatsClient(STATSD_HOST, 8125, prefix="hntags")
+    stats_client = statsd.StatsClient(STATSD_HOST, 8125, prefix="hntags")
 
-    # Retrieve & categorise the stories
-    firebase = hn_firebase.get_hn_firebase_connection()
-    classifier = llm.Classifier(
-        client=llm.get_ollama_client(MODEL_HOST), model=MODEL, threads=THREADS
-    )
-    ingestion = hntags.Ingestion(
-        max_stories=STORIES_IN_PAGE,
-        max_comments=MAX_COMMENTS,
-        max_categories=MAX_CATEGORIES,
-    )
+    with stats_client.timer("complete"):
+        # Retrieve & categorise the stories
+        firebase = hn_firebase.get_hn_firebase_connection()
+        classifier = llm.Classifier(
+            client=llm.get_ollama_client(MODEL_HOST), model=MODEL, threads=THREADS
+        )
+        ingestion = hntags.Ingestion(
+            max_stories=STORIES_IN_PAGE,
+            max_comments=MAX_COMMENTS,
+            max_categories=MAX_CATEGORIES,
+        )
 
-    categorised_stories, stories = hntags.retrieve_and_categorise_stories(
-        firebase=firebase,
-        classifier=classifier,
-        ingestion=ingestion,
-        start_time_utc=start_time_utc,
-    )
+        categorised_stories, stories = hntags.retrieve_and_categorise_stories(
+            firebase=firebase,
+            classifier=classifier,
+            ingestion=ingestion,
+            stats_client=stats_client,
+            start_time_utc=start_time_utc,
+        )
 
-    # Generate the output files into a working directory (always `./output` relative to the working directory)
-    html_gen.generate(
-        start_time_utc=start_time_utc,
-        stories=stories,
-        categorised_stories=categorised_stories,
-    )
+        # Generate the output files into a working directory (always `./output` relative to the working directory)
+        with stats_client.timer("generate_html"):
+            html_gen.generate(
+                start_time_utc=start_time_utc,
+                stories=stories,
+                categorised_stories=categorised_stories,
+            )
 
-    # Push everything up to be served publicly
-    publish.publish(BUCKET_NAME, DISTRIBUTION_ID)
+        # Push everything up to be served publicly
+        publish.publish(BUCKET_NAME, DISTRIBUTION_ID, stats_client)
 
-    finish = datetime.datetime.now(datetime.timezone.utc)
+        finish = datetime.datetime.now(datetime.timezone.utc)
 
-    total_run_time_seconds = (finish - start_time_utc).total_seconds()
-    categorised_stories = len(categorised_stories)
+        total_run_time_seconds = (finish - start_time_utc).total_seconds()
+        categorised_stories = len(categorised_stories)
 
-    print(
-        f"Run finished at {finish} (Local time) after {total_run_time_seconds} seconds with {categorised_stories} total categories identified."
-    )
-
-    stats.timing("runtime_seconds", total_run_time_seconds)
+        print(
+            f"Run finished at {finish} (Local time) after {total_run_time_seconds} seconds with {categorised_stories} total categories identified."
+        )
 
 
 # I am clueless... is this necessary/useful?

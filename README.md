@@ -26,8 +26,8 @@ docker run \
   ghcr.io/dcminter/hntags:latest
 ```
 
-Inside the Docker image, however, the tool is run by doing a `source .venv/bin/activate` to update the Python virtual 
-environment, then activating that and running the hntags command - i.e.
+Inside the Docker image (where a uv sync has already been RUN at build time), however, the tool is run by doing 
+a `source .venv/bin/activate` to activate the Python virtual environment, then running the hntags command - i.e.
 
 ```bash
 source .venv/bin/activate
