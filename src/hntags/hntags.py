@@ -43,9 +43,13 @@ def process_comments(
             for index, comment_id in enumerate(comment_ids):
                 print(".", end="", sep="", flush=True)
                 raw_comment = hn_firebase.get_raw_comment(firebase, comment_id)
-                comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
-                        {raw_comment.get("text") or ""}"""
-                comment_texts.append(comment_text)
+                if raw_comment is None:
+                    printf(f"Could not retrieve comment text for {comment_id}")
+                    stats_client.incr("no_comment_text_for_id")
+                else:
+                    comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
+                            {raw_comment.get("text") or ""}"""
+                    comment_texts.append(comment_text)
             print()
 
         with stats_client.timer("categorise_story_and_comments"):
