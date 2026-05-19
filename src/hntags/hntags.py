@@ -24,6 +24,14 @@ def process_comments(
 ):
     with stats_client.timer("get_raw_story"):
         raw_story = hn_firebase.get_raw_story(firebase, story_id)
+        if raw_story is None:
+            print(f"No story retrievable with id {story_id} so giving up fast")
+            return None
+
+        if raw_story.get("title") is None:
+            print(f"No title on story with id {story_id} so giving up fast")
+            return None
+
         print(
             f"Retrieved story with id {story_id} and title '{raw_story.get('title')}'"
         )
@@ -59,6 +67,7 @@ def process_comments(
                 story_text=story_text,
                 comment_texts=comment_texts,
                 max_categories=max_categories,
+                stats_client=stats_client,
             )
             raw_story["comment_count"] = comment_count
 

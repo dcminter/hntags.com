@@ -2,6 +2,7 @@ from ollama import Client
 from typing import NamedTuple
 import datetime
 import httpx
+from statsd import StatsClient
 
 
 class Classifier(NamedTuple):
@@ -38,12 +39,16 @@ def categorise_story_and_comments(
     story_text: str,
     comment_texts: list[str],
     max_categories: int,
+    stats_client: StatsClient,
 ):
+    stats_client.gauge("story_size_codepoints", len(story_text))
     context = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": story_text},
     ]
+
     for comment_text in comment_texts:
+        stats_client.gauge("comment_size_codepoints", len(comment_text))
         context.append({"role": "user", "content": comment_text})
 
     start = datetime.datetime.now()
