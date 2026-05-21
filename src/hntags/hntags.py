@@ -52,7 +52,7 @@ def process_comments(
                 print(".", end="", sep="", flush=True)
                 raw_comment = hn_firebase.get_raw_comment(firebase, comment_id)
                 if raw_comment is None:
-                    printf(f"Could not retrieve comment text for {comment_id}")
+                    print(f"Could not retrieve comment text for {comment_id}")
                     stats_client.incr("no_comment_text_for_id")
                 else:
                     comment_text = f"""Comment ID: {comment_id}, By: {raw_comment.get("by")}, Time: {raw_comment.get("time")}, Score: {raw_comment.get("score")}, Dead: {raw_comment.get("dead")}, Deleted: {raw_comment.get("deleted")}
