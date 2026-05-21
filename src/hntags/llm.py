@@ -55,6 +55,8 @@ def categorise_story_and_comments(
     print(
         f"Making request to ollama with model '{classifier.model}' at {start} (Local time)"
     )
+
+    print(f"FULL Context: {context}")
     try:
         ollama_response: ChatResponse = classifier.client.chat(
             model=classifier.model,
