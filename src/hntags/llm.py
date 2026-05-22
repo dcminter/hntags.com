@@ -1,4 +1,4 @@
-from ollama import Client
+from ollama import Client, GenerateResponse
 from typing import NamedTuple
 import datetime
 import httpx
@@ -42,26 +42,24 @@ def categorise_story_and_comments(
     stats_client: StatsClient,
 ):
     stats_client.gauge("story_size_codepoints", len(story_text))
-    context = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": story_text},
-    ]
+    prompt = story_text
 
     for comment_text in comment_texts:
         stats_client.gauge("comment_size_codepoints", len(comment_text))
-        context.append({"role": "user", "content": comment_text})
+        prompt += "\n"
+        prompt += comment_text
 
     start = datetime.datetime.now()
     print(
         f"Making request to ollama with model '{classifier.model}' at {start} (Local time)"
     )
 
-    print(f"FULL Context: {context}")
     try:
-        ollama_response: ChatResponse = classifier.client.chat(
+        ollama_response: GenerateResponse = classifier.client.generate(
+            system=SYSTEM_PROMPT,
             model=classifier.model,
             options={"num_thread": classifier.threads},
-            messages=context,
+            prompt=prompt,
         )
     except httpx.ReadTimeout as error:
         finish = datetime.datetime.now()
@@ -75,7 +73,7 @@ def categorise_story_and_comments(
         f"Response received at {finish} (Local time) taking {(finish - start).total_seconds()} seconds to complete"
     )
 
-    categories = list(map(str.strip, ollama_response.message.content.split(",")))
+    categories = list(map(str.strip, ollama_response.response.split(",")))
     categories = [category.lower() for category in categories]
     for category in categories:
         print(f"Category: {category}")
